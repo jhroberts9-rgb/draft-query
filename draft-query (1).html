@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Draft Query — AEO Readiness Scorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Libre+Franklin:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1a18;
+    --ink-2: #3a3a36;
+    --ink-3: #6b6b65;
+    --ink-4: #a8a89e;
+    --newsprint: #f5f3ee;
+    --newsprint-2: #edeae3;
+    --newsprint-3: #e0ddd5;
+    --rule: #c8c5bc;
+    --accent: #c4391c;
+    --accent-2: #e8c547;
+    --score-a: #2d6a4f;
+    --score-b: #52b788;
+    --score-c: #d4a017;
+    --score-d: #c4391c;
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body: 'Libre Franklin', 'Franklin Gothic Medium', sans-serif;
+    --font-mono: 'DM Mono', 'Courier New', monospace;
+  }
+
+  html, body {
+    background: var(--newsprint);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .masthead {
+    border-bottom: 3px double var(--ink);
+    padding: 1.5rem 2rem 1rem;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .masthead-left { flex: 1; }
+
+  .masthead-flag {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  .masthead-sub {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-top: 0.3rem;
+  }
+
+  .masthead-meta {
+    text-align: right;
+    font-size: 0.72rem;
+    color: var(--ink-3);
+    font-family: var(--font-mono);
+    line-height: 1.8;
+  }
+
+  .dateline {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    font-family: var(--font-body);
+    font-weight: 500;
+    border-bottom: 1px solid var(--rule);
+    padding: 0.4rem 2rem;
+  }
+
+  .layout {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 2.5rem;
+    align-items: start;
+  }
+
+  @media (max-width: 780px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { order: -1; }
+  }
+
+  .section-rule {
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink-3);
+    border-top: 2px solid var(--ink);
+    padding-top: 0.4rem;
+    margin-bottom: 1rem;
+  }
+
+  .input-area label {
+    display: block;
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink-3);
+    margin-bottom: 0.5rem;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 320px;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 1rem 1.1rem;
+    font-family: var(--font-body);
+    font-size: 0.93rem;
+    line-height: 1.7;
+    color: var(--ink);
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  textarea::placeholder { color: var(--ink-4); }
+  textarea:focus { border-color: var(--ink-2); }
+
+  .input-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    font-size: 0.72rem;
+    color: var(--ink-4);
+    font-family: var(--font-mono);
+  }
+
+  .btn-run {
+    margin-top: 1.2rem;
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    background: var(--ink);
+    color: var(--newsprint);
+    border: none;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    border-radius: 2px;
+  }
+
+  .btn-run:hover { background: var(--ink-2); }
+  .btn-run:active { transform: scale(0.99); }
+  .btn-run:disabled { background: var(--ink-4); cursor: not-allowed; }
+
+  .btn-run .spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid rgba(245,243,238,0.3);
+    border-top-color: var(--newsprint);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 8px;
+    vertical-align: -1px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .sidebar {}
+
+  .score-masthead {
+    background: var(--ink);
+    color: var(--newsprint);
+    padding: 1.5rem;
+    border-radius: 2px;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .score-masthead::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(255,255,255,0.015) 3px,
+      rgba(255,255,255,0.015) 4px
+    );
+  }
+
+  .score-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(245,243,238,0.5);
+    font-weight: 500;
+    position: relative;
+  }
+
+  .score-number {
+    font-family: var(--font-display);
+    font-size: 5rem;
+    line-height: 1;
+    margin: 0.2rem 0 0;
+    position: relative;
+    transition: color 0.4s;
+  }
+
+  .score-grade {
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 500;
+    position: relative;
+    margin-top: 0.3rem;
+  }
+
+  .score-bar-wrap {
+    margin-top: 1rem;
+    background: rgba(255,255,255,0.1);
+    height: 4px;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--newsprint-2);
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+  }
+
+  .dimensions { display: flex; flex-direction: column; gap: 0.1rem; }
+
+  .dim-card {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--rule);
+    border-radius: 2px;
+    padding: 0.9rem 1rem;
+    transition: border-left-color 0.4s;
+  }
+
+  .dim-card.scored { border-left-color: var(--accent); }
+
+  .dim-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .dim-name {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+
+  .dim-score-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .dim-score {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--ink);
+    min-width: 2.2rem;
+    text-align: right;
+  }
+
+  .dim-score-max {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--ink-4);
+  }
+
+  .dim-mini-bar {
+    height: 2px;
+    background: var(--newsprint-3);
+    border-radius: 1px;
+    margin-bottom: 0.6rem;
+    overflow: hidden;
+  }
+
+  .dim-mini-fill {
+    height: 100%;
+    border-radius: 1px;
+    width: 0%;
+    transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dim-rec {
+    font-size: 0.8rem;
+    color: var(--ink-3);
+    font-style: italic;
+    line-height: 1.5;
+    min-height: 1.2em;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--ink-4);
+  }
+
+  .empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.35;
+  }
+
+  .empty-state p {
+    font-size: 0.8rem;
+    line-height: 1.6;
+    font-style: italic;
+  }
+
+  .how-it-works {
+    margin-top: 2rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 1.25rem;
+  }
+
+  .how-it-works h3 {
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink-3);
+    margin-bottom: 0.75rem;
+  }
+
+  .dim-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .dim-list li {
+    font-size: 0.79rem;
+    color: var(--ink-3);
+    padding-left: 0.9rem;
+    position: relative;
+    line-height: 1.4;
+  }
+
+  .dim-list li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--rule);
+  }
+
+  .dim-list strong {
+    color: var(--ink-2);
+    font-weight: 500;
+  }
+
+  .error-msg {
+    background: #fff3f3;
+    border: 1px solid #e8c0c0;
+    border-left: 3px solid var(--accent);
+    padding: 0.8rem 1rem;
+    font-size: 0.82rem;
+    color: var(--ink-2);
+    border-radius: 2px;
+    margin-top: 1rem;
+  }
+
+  .api-note {
+    font-size: 0.7rem;
+    color: var(--ink-4);
+    margin-top: 0.5rem;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-left">
+    <div class="masthead-flag">Draft Query</div>
+    <div class="masthead-sub">Answer Engine Optimization · Editorial Readiness Scorer</div>
+  </div>
+  <div class="masthead-meta">
+    AEO Score<br>v1.0<br>Five Dimensions
+  </div>
+</header>
+
+<div class="dateline">For editorial professionals &amp; sportswriters — score your draft before it goes to desk</div>
+
+<div class="layout">
+  <main>
+    <div class="section-rule">Submit your draft</div>
+
+    <div class="input-area">
+      <label for="draft-input">Paste article, blog post, or feature draft</label>
+      <textarea
+        id="draft-input"
+        placeholder="Paste your full draft here — lede, body, and kicker. The scorer reads for answer structure, semantic clarity, claim specificity, quotability, and heading hierarchy. Longer drafts yield more accurate scoring."
+      ></textarea>
+      <div class="input-meta">
+        <span id="word-count">0 words</span>
+        <span>Minimum 50 words for reliable scoring</span>
+      </div>
+    </div>
+
+    <button class="btn-run" id="run-btn" onclick="runScore()">
+      Run AEO Audit
+    </button>
+
+    <div id="error-area"></div>
+
+    <div class="how-it-works">
+      <h3>What each dimension measures</h3>
+      <ul class="dim-list">
+        <li><strong>Answer Structure</strong> — Does the piece open with a clear, direct answer to an implied question? Are key facts surfaced early rather than buried in the body?</li>
+        <li><strong>Semantic Clarity</strong> — Are entities (teams, players, events, stats) named explicitly and unambiguously? Could an AI parse this without contextual knowledge?</li>
+        <li><strong>Claim Specificity</strong> — Are assertions backed by concrete figures, dates, names, or sourced data rather than vague qualifiers?</li>
+        <li><strong>Quotability</strong> — Does the piece contain discrete, self-contained passages that could surface as featured snippets or AI summaries?</li>
+        <li><strong>Heading Hierarchy</strong> — Is the structure scannable? Are subheads descriptive enough to stand alone as mini-answers?</li>
+      </ul>
+    </div>
+  </main>
+
+  <aside class="sidebar">
+    <div class="score-masthead" id="score-masthead">
+      <div class="score-label">AEO Readiness Score</div>
+      <div class="score-number" id="total-score">—</div>
+      <div class="score-grade" id="score-grade">Awaiting copy</div>
+      <div class="score-bar-wrap">
+        <div class="score-bar-fill" id="score-bar"></div>
+      </div>
+    </div>
+
+    <div class="section-rule">Dimension breakdown</div>
+
+    <div class="dimensions" id="dimensions">
+      <div class="empty-state">
+        <div class="empty-icon">◎</div>
+        <p>Submit a draft to see<br>dimension-by-dimension scoring<br>and recommendations.</p>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const DIMENSIONS = [
+  { key: 'answer_structure', label: 'Answer Structure' },
+  { key: 'semantic_clarity', label: 'Semantic Clarity' },
+  { key: 'claim_specificity', label: 'Claim Specificity' },
+  { key: 'quotability', label: 'Quotability' },
+  { key: 'heading_hierarchy', label: 'Heading Hierarchy' }
+];
+
+const textarea = document.getElementById('draft-input');
+const wordCountEl = document.getElementById('word-count');
+const runBtn = document.getElementById('run-btn');
+const errorArea = document.getElementById('error-area');
+
+textarea.addEventListener('input', () => {
+  const words = textarea.value.trim().split(/\s+/).filter(Boolean).length;
+  wordCountEl.textContent = words + ' word' + (words !== 1 ? 's' : '');
+});
+
+function getScoreColor(score, max) {
+  const pct = score / max;
+  if (pct >= 0.8) return '#2d6a4f';
+  if (pct >= 0.6) return '#52b788';
+  if (pct >= 0.4) return '#d4a017';
+  return '#c4391c';
+}
+
+function getGrade(total) {
+  if (total >= 85) return 'Publication Ready';
+  if (total >= 70) return 'Strong — Minor Gaps';
+  if (total >= 55) return 'Needs Work';
+  if (total >= 40) return 'Significant Revision';
+  return 'Not AEO-Ready';
+}
+
+function renderDimensions(data) {
+  const container = document.getElementById('dimensions');
+  container.innerHTML = '';
+
+  DIMENSIONS.forEach((dim, i) => {
+    const d = data[dim.key];
+    if (!d) return;
+
+    const score = Math.round(d.score);
+    const color = getScoreColor(score, 20);
+
+    const card = document.createElement('div');
+    card.className = 'dim-card';
+    card.innerHTML = `
+      <div class="dim-top">
+        <div class="dim-name">${dim.label}</div>
+        <div class="dim-score-wrap">
+          <div class="dim-score" style="color:${color}">${score}</div>
+          <div class="dim-score-max">/20</div>
+        </div>
+      </div>
+      <div class="dim-mini-bar">
+        <div class="dim-mini-fill" id="bar-${dim.key}" style="background:${color}"></div>
+      </div>
+      <div class="dim-rec">${d.recommendation || ''}</div>
+    `;
+    container.appendChild(card);
+
+    setTimeout(() => {
+      card.classList.add('scored');
+      const fill = document.getElementById('bar-' + dim.key);
+      if (fill) fill.style.width = (score / 20 * 100) + '%';
+    }, i * 120);
+  });
+}
+
+function renderTotal(total) {
+  const el = document.getElementById('total-score');
+  const grade = document.getElementById('score-grade');
+  const bar = document.getElementById('score-bar');
+
+  const color = getScoreColor(total, 100);
+
+  el.textContent = Math.round(total);
+  el.style.color = color === '#2d6a4f' ? '#a8f0cb' :
+                   color === '#52b788' ? '#7ddeb5' :
+                   color === '#d4a017' ? '#f5d876' : '#f5a090';
+
+  grade.textContent = getGrade(total);
+
+  setTimeout(() => {
+    bar.style.width = total + '%';
+  }, 200);
+}
+
+async function runScore() {
+  const text = textarea.value.trim();
+  const words = text.split(/\s+/).filter(Boolean).length;
+
+  errorArea.innerHTML = '';
+
+  if (words < 50) {
+    errorArea.innerHTML = '<div class="error-msg">Paste at least 50 words for a meaningful AEO audit. A headline alone won\'t score reliably.</div>';
+    return;
+  }
+
+  runBtn.disabled = true;
+  runBtn.innerHTML = '<span class="spinner"></span>Analyzing draft…';
+
+  document.getElementById('total-score').textContent = '—';
+  document.getElementById('score-grade').textContent = 'Analyzing…';
+  document.getElementById('score-bar').style.width = '0%';
+  document.getElementById('dimensions').innerHTML = '<div class="empty-state"><p style="font-style:normal;color:var(--ink-4);font-size:0.8rem;">Running AEO audit…</p></div>';
+
+  const systemPrompt = `You are an expert in Answer Engine Optimization (AEO) — the craft of writing content that is easy for AI systems, featured snippets, and knowledge engines to parse, extract, and surface accurately. You score editorial content (articles, blog posts, sports journalism) across five dimensions. Return ONLY valid JSON with no markdown fences or extra text.`;
+
+  const userPrompt = `Score the following draft for AEO readiness. Return a JSON object with exactly this structure:
+
+{
+  "total": <number 0-100>,
+  "answer_structure": { "score": <0-20>, "recommendation": "<one sentence>" },
+  "semantic_clarity": { "score": <0-20>, "recommendation": "<one sentence>" },
+  "claim_specificity": { "score": <0-20>, "recommendation": "<one sentence>" },
+  "quotability": { "score": <0-20>, "recommendation": "<one sentence>" },
+  "heading_hierarchy": { "score": <0-20>, "recommendation": "<one sentence>" }
+}
+
+Scoring rubric:
+- answer_structure: Does the piece lead with a direct, extractable answer? Is the main point front-loaded? Penalize buried ledes and circular openings.
+- semantic_clarity: Are all entities (people, teams, events, dates, places) named explicitly and precisely? Could an AI parse this without background knowledge? Penalize pronoun ambiguity and assumed context.
+- claim_specificity: Are claims backed by concrete data — statistics, dates, names, sourced quotes, specific outcomes? Penalize vague qualifiers ("many," "some," "recently") without backing.
+- quotability: Does the piece contain self-contained, snippet-worthy passages? Are there clear, discrete summary sentences that could appear in an AI answer verbatim? Penalize continuous flowing prose with no extractable units.
+- heading_hierarchy: Are subheadings present and descriptive? Could a reader understand the structure from headings alone? If no headings are present, score low but note if the piece is short enough to not need them.
+
+The total should be the sum of all five dimension scores (each /20), not an independent calculation.
+
+Recommendations must be specific, actionable, and written for a journalist — not generic. Reference the actual content where possible.
+
+Draft to score:
+"""
+${text.slice(0, 6000)}
+"""`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'API error ' + response.status);
+    }
+
+    const data = await response.json();
+    const raw = data.content.map(b => b.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch {
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) parsed = JSON.parse(match[0]);
+      else throw new Error('Could not parse response as JSON.');
+    }
+
+    const total = typeof parsed.total === 'number'
+      ? Math.min(100, Math.max(0, parsed.total))
+      : DIMENSIONS.reduce((s, d) => s + (parsed[d.key]?.score || 0), 0);
+
+    renderTotal(total);
+    renderDimensions(parsed);
+
+  } catch (err) {
+    errorArea.innerHTML = `<div class="error-msg"><strong>Scoring failed:</strong> ${err.message}<br><span class="api-note">Make sure you're accessing this tool through a Claude-enabled interface, or check your API key configuration.</span></div>`;
+    document.getElementById('total-score').textContent = '—';
+    document.getElementById('score-grade').textContent = 'Error';
+    document.getElementById('dimensions').innerHTML = '<div class="empty-state"><p style="color:var(--ink-4);font-size:0.8rem;font-style:italic;">Scoring unavailable. Check the error above.</p></div>';
+  } finally {
+    runBtn.disabled = false;
+    runBtn.innerHTML = 'Run AEO Audit';
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') runScore();
+});
+
+const today = new Date();
+document.querySelector('.dateline').insertAdjacentHTML(
+  'beforeend',
+  ` &nbsp;·&nbsp; <span style="font-family:var(--font-mono);font-size:0.65rem">${today.toLocaleDateString('en-US', {month:'long',day:'numeric',year:'numeric'})}</span>`
+);
+</script>
+</body>
+</html>
